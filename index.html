@@ -4,39 +4,73 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Más Allá Del Placer - Catálogo</title>
-  <!-- Widget para gestionar contraseña y usuarios -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <style>
-    body { font-family: sans-serif; background: #121212; color: #fff; text-align: center; margin: 0; padding: 20px; }
-    h1 { color: #e91e63; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; max-width: 1000px; margin: 20px auto; }
-    .card { background: #1e1e1e; padding: 15px; border-radius: 8px; border: 1px solid #333; }
+    :root { --primary: #e91e63; --bg: #121212; --card-bg: #1e1e1e; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: #fff; margin: 0; padding: 20px; }
+    header { text-align: center; margin-bottom: 30px; }
+    h1 { color: var(--primary); margin-bottom: 5px; }
+    .catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; max-width: 1100px; margin: 0 auto; }
+    .product-card { background: var(--card-bg); border-radius: 10px; overflow: hidden; border: 1px solid #333; display: flex; flex-direction: column; justify-content: space-between; padding: 15px; }
+    .product-card img { width: 100%; height: 220px; object-fit: cover; border-radius: 8px; }
+    .product-title { font-size: 1.1rem; margin: 10px 0 5px; color: #fff; }
+    .product-code { color: #888; font-size: 0.85rem; font-weight: bold; margin-bottom: 10px; }
+    .product-desc { font-size: 0.9rem; color: #ccc; margin-bottom: 15px; flex-grow: 1; text-align: left; }
+    .btn-ws { display: inline-block; background-color: #25d366; color: white; text-decoration: none; padding: 10px; border-radius: 6px; font-weight: bold; text-align: center; }
   </style>
 </head>
 <body>
-  <h1>Más Allá Del Placer</h1>
-  <p>Catálogo Oficial</p>
-  <div class="grid">
-    <div class="card">
-      <h3>Disfraz DS005</h3>
-      <p>Línea A&B</p>
-    </div>
-    <div class="card">
-      <h3>Disfraz DS007</h3>
-      <p>Línea A&B</p>
-    </div>
-  </div>
+
+  <header>
+    <h1>Más Allá Del Placer</h1>
+    <p>Catálogo Oficial de Disfraces y Juguetería</p>
+  </header>
+
+  <div class="catalog-grid" id="catalog"></div>
 
   <script>
-    if (window.netlifyIdentity) {
-      window.netlifyIdentity.on("init", user => {
-        if (!user) {
-          window.netlifyIdentity.on("login", () => {
-            document.location.href = "/admin/";
-          });
+    // Configura tu número de WhatsApp aquí (con código de país sin el signo +)
+    const NERO_WHATSAPP = "573000000000"; 
+
+    // Cargar productos del CMS
+    async function loadProducts() {
+      const catalogContainer = document.getElementById('catalog');
+      try {
+        const response = await fetch('https://api.github.com/repos/luisgordillo-sys/Mas_All_-Del_Placer/contents/content/productos');
+        if (!response.ok) return;
+        const files = await response.json();
+        
+        for (const file of files) {
+          if (file.name.endsWith('.md')) {
+            const res = await fetch(file.download_url);
+            const text = await res.text();
+            
+            const title = text.match(/title:\s*"?([^"\n]+)"?/)?.[1] || '';
+            const code = text.match(/code:\s*"?([^"\n]+)"?/)?.[1] || '';
+            const image = text.match(/image:\s*"?([^"\n]+)"?/)?.[1] || '';
+            const body = text.split('---').pop().trim();
+
+            const card = document.createElement('div');
+            card.className = 'product-card';
+            card.innerHTML = `
+              <div>
+                ${image ? `<img src="${image}" alt="${title}">` : ''}
+                <div class="product-title">${title}</div>
+                <div class="product-code">CÓDIGO: ${code}</div>
+                <div class="product-desc">${body}</div>
+              </div>
+              <a class="btn-ws" href="https://wa.me/${NERO_WHATSAPP}?text=Hola,%20estoy%20interesado%20en%20el%20producto:%20${encodeURIComponent(title)}%20(Código:%20${encodeURIComponent(code)})" target="_blank">Pedir por WhatsApp</a>
+            `;
+            catalogContainer.appendChild(card);
+          }
         }
-      });
+      } catch (e) {
+        console.error("Error cargando productos:", e);
+      }
     }
+    loadProducts();
   </script>
+</body>
+</html>
 </body>
 </html>
