@@ -29,94 +29,86 @@
   </header>
 
   <div class="catalog-grid" id="catalog">
-    <div class="empty-msg">Cargando productos...</div>
+    <div class="empty-msg">Cargando productos del catálogo...</div>
   </div>
 
   <script>
     const WHATSAPP_NUMBER = "573194622371";
 
-    // Función principal para cargar productos desde la API de GitHub
-    async function loadCatalog() {
+    async function fetchProducts() {
       const catalog = document.getElementById('catalog');
+      let productsFound = [];
+
+      // 1. Intentar obtener la lista de archivos mediante API de GitHub pública
       try {
         const repo = "luisgordillo-sys/Mas_All_-Del_Placer";
-        const response = await fetch(`https://api.github.com/repos/${repo}/contents/content/productos`);
-        
-        if (!response.ok) {
-          throw new Error("No se pudo obtener el listado desde GitHub API.");
-        }
-
-        const files = await response.json();
-        catalog.innerHTML = "";
-
-        for (const file of files) {
-          if (file.name.endsWith('.md')) {
-            const rawRes = await fetch(file.download_url);
-            const content = await rawRes.text();
-
-            parseAndRenderProduct(content, catalog);
+        const res = await fetch(`https://api.github.com/repos/${repo}/contents/content/productos`);
+        if (res.ok) {
+          const files = await res.json();
+          for (const file of files) {
+            if (file.name.endsWith('.md')) {
+              productsFound.push(file.download_url);
+            }
           }
         }
-      } catch (e) {
-        console.warn("Fallo lectura dinámica API. Intentando método alternativo por archivos locales...", e);
-        fallbackLocalLoad();
+      } catch (err) {
+        console.warn("API de GitHub no disponible, usando escaneo local directo.");
       }
-    }
 
-    // Método alternativo si la API de GitHub llega a ser bloqueada
-    async function fallbackLocalLoad() {
-      const catalog = document.getElementById('catalog');
-      const knownFiles = [
-        "disfraz-de-ratona-sensual.md",
-        "lencería-de-enfermera-disfraz-erotic-enfermera.md"
-      ];
-      
+      // 2. Si la API falla o no devuelve datos, consultar rutas locales conocidas y dinámicas
+      if (productsFound.length === 0) {
+        const localCandidates = [
+          "/content/productos/disfraz-de-ratona-sensual.md",
+          "/content/productos/lencería-de-enfermera-disfraz-erotic-enfermera.md",
+          "/content/productos/lenceria-de-gatita-disfraz-erótico-gatita.md",
+          "/content/productos/lenceria-de-gatita-disfraz-erotico-gatita.md"
+        ];
+        productsFound = localCandidates;
+      }
+
       catalog.innerHTML = "";
       let count = 0;
 
-      for (const fileName of knownFiles) {
+      for (const urlOrPath of productsFound) {
         try {
-          const res = await fetch(`/content/productos/${fileName}`);
-          if (res.ok) {
-            const content = await res.text();
-            parseAndRenderProduct(content, catalog);
-            count++;
-          }
-        } catch (err) {}
+          const res = await fetch(urlOrPath);
+          if (!res.ok) continue;
+
+          const content = await res.text();
+
+          const titleMatch = content.match(/title:\s*"?([^"\n]+)"?/);
+          const codeMatch = content.match(/code:\s*"?([^"\n]+)"?/);
+          const imageMatch = content.match(/image:\s*"?([^"\n]+)"?/);
+
+          const title = titleMatch ? titleMatch[1] : 'Producto';
+          const code = codeMatch ? codeMatch[1] : 'N/A';
+          const image = imageMatch ? imageMatch[1] : '';
+
+          const bodyParts = content.split('---');
+          const body = bodyParts.length > 2 ? bodyParts.slice(2).join('---').replace(/"/g, '').trim() : '';
+
+          const card = document.createElement('div');
+          card.className = 'product-card';
+          card.innerHTML = `
+            <div>
+              ${image ? `<img src="${image}" alt="${title}">` : ''}
+              <div class="product-title">${title}</div>
+              <div class="product-code">CÓDIGO: ${code}</div>
+              <div class="product-desc">${body}</div>
+            </div>
+            <a class="btn-ws" href="https://wa.me/${WHATSAPP_NUMBER}?text=Hola,%20quiero%20consultar%20por%20el%20producto:%20${encodeURIComponent(title)}%20(Código:%20${encodeURIComponent(code)})" target="_blank">Pedir por WhatsApp</a>
+          `;
+          catalog.appendChild(card);
+          count++;
+        } catch (e) {}
       }
 
       if (count === 0) {
-        catalog.innerHTML = `<div class="empty-msg">No se pudieron cargar los productos. Por favor recarga la página.</div>`;
+        catalog.innerHTML = `<div class="empty-msg">No hay productos disponibles por el momento.</div>`;
       }
     }
 
-    function parseAndRenderProduct(content, container) {
-      const titleMatch = content.match(/title:\s*"?([^"\n]+)"?/);
-      const codeMatch = content.match(/code:\s*"?([^"\n]+)"?/);
-      const imageMatch = content.match(/image:\s*"?([^"\n]+)"?/);
-
-      const title = titleMatch ? titleMatch[1] : 'Producto';
-      const code = codeMatch ? codeMatch[1] : 'N/A';
-      const image = imageMatch ? imageMatch[1] : '';
-
-      const bodyParts = content.split('---');
-      const body = bodyParts.length > 2 ? bodyParts.slice(2).join('---').replace(/"/g, '').trim() : '';
-
-      const card = document.createElement('div');
-      card.className = 'product-card';
-      card.innerHTML = `
-        <div>
-          ${image ? `<img src="${image}" alt="${title}">` : ''}
-          <div class="product-title">${title}</div>
-          <div class="product-code">CÓDIGO: ${code}</div>
-          <div class="product-desc">${body}</div>
-        </div>
-        <a class="btn-ws" href="https://wa.me/${WHATSAPP_NUMBER}?text=Hola,%20quiero%20consultar%20por%20el%20producto:%20${encodeURIComponent(title)}%20(Código:%20${encodeURIComponent(code)})" target="_blank">Pedir por WhatsApp</a>
-      `;
-      container.appendChild(card);
-    }
-
-    loadCatalog();
+    fetchProducts();
   </script>
 
 </body>
