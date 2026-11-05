@@ -37,41 +37,38 @@
 
     async function fetchProducts() {
       const catalog = document.getElementById('catalog');
-      let productsFound = [];
+      let markdownUrls = [];
 
-      // 1. Intentar obtener la lista de archivos mediante API de GitHub pública
+      // 1. Petición a la API de GitHub
       try {
         const repo = "luisgordillo-sys/Mas_All_-Del_Placer";
-        const res = await fetch(`https://api.github.com/repos/${repo}/contents/content/productos`);
+        const res = await fetch(`https://api.github.com/repos/${repo}/contents/content/productos?t=${Date.now()}`);
         if (res.ok) {
           const files = await res.json();
           for (const file of files) {
             if (file.name.endsWith('.md')) {
-              productsFound.push(file.download_url);
+              markdownUrls.push(file.download_url);
             }
           }
         }
-      } catch (err) {
-        console.warn("API de GitHub no disponible, usando escaneo local directo.");
-      }
+      } catch (err) {}
 
-      // 2. Si la API falla o no devuelve datos, consultar rutas locales conocidas y dinámicas
-      if (productsFound.length === 0) {
-        const localCandidates = [
+      // 2. Lista de rutas locales de respaldo (incluyendo variaciones de nombres)
+      if (markdownUrls.length === 0) {
+        markdownUrls = [
           "/content/productos/disfraz-de-ratona-sensual.md",
           "/content/productos/lencería-de-enfermera-disfraz-erotic-enfermera.md",
-          "/content/productos/lenceria-de-gatita-disfraz-erótico-gatita.md",
-          
+          "/content/productos/lenceria-de-gatita-disfraz-erotic-gatita.md",
+         
         ];
-        productsFound = localCandidates;
       }
 
       catalog.innerHTML = "";
       let count = 0;
 
-      for (const urlOrPath of productsFound) {
+      for (const urlOrPath of markdownUrls) {
         try {
-          const res = await fetch(urlOrPath);
+          const res = await fetch(`${urlOrPath}?v=${Date.now()}`);
           if (!res.ok) continue;
 
           const content = await res.text();
