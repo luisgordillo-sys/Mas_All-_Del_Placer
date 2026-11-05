@@ -29,55 +29,58 @@
   </header>
 
   <div class="catalog-grid" id="catalog">
-    <div class="empty-msg">Cargando productos...</div>
+    <div class="empty-msg">Cargando catálogo...</div>
   </div>
 
   <script>
-    // Tu número de WhatsApp (código de país sin el +)
-    const WHATSAPP_NUMBER = "573194622371"; 
-
-    // Lista de rutas de productos publicados
-    const productFiles = [
-      "/content/productos/disfraz-de-ratona-sensual.md"
-    ];
+    const WHATSAPP_NUMBER = "573194622371";
 
     async function loadCatalog() {
       const catalog = document.getElementById('catalog');
-      catalog.innerHTML = "";
-
-      for (const filePath of productFiles) {
-        try {
-          const res = await fetch(filePath);
-          if (!res.ok) continue;
-          
-          const content = await res.text();
-          
-          const titleMatch = content.match(/title:\s*"?([^"\n]+)"?/);
-          const codeMatch = content.match(/code:\s*"?([^"\n]+)"?/);
-          const imageMatch = content.match(/image:\s*"?([^"\n]+)"?/);
-          
-          const title = titleMatch ? titleMatch[1] : 'Producto sin nombre';
-          const code = codeMatch ? codeMatch[1] : 'N/A';
-          const image = imageMatch ? imageMatch[1] : '';
-          
-          const bodyParts = content.split('---');
-          const body = bodyParts.length > 2 ? bodyParts.slice(2).join('---').replace(/"/g, '').trim() : '';
-
-          const card = document.createElement('div');
-          card.className = 'product-card';
-          card.innerHTML = `
-            <div>
-              ${image ? `<img src="${image}" alt="${title}">` : ''}
-              <div class="product-title">${title}</div>
-              <div class="product-code">CÓDIGO: ${code}</div>
-              <div class="product-desc">${body}</div>
-            </div>
-            <a class="btn-ws" href="https://wa.me/${WHATSAPP_NUMBER}?text=Hola,%20quiero%20consultar%20por%20el%20producto:%20${encodeURIComponent(title)}%20(Código:%20${encodeURIComponent(code)})" target="_blank">Pedir por WhatsApp</a>
-          `;
-          catalog.appendChild(card);
-        } catch (e) {
-          console.error("Error cargando producto:", e);
+      try {
+        // Consulta automática a la API pública de GitHub para obtener todos los productos creados
+        const response = await fetch('https://api.github.com/repos/luisgordillo-sys/Mas_All_-Del_Placer/contents/content/productos');
+        
+        if (!response.ok) {
+          catalog.innerHTML = `<div class="empty-msg">No se pudieron cargar los productos.</div>`;
+          return;
         }
+
+        const files = await response.json();
+        catalog.innerHTML = "";
+
+        for (const file of files) {
+          if (file.name.endsWith('.md')) {
+            const rawRes = await fetch(file.download_url);
+            const content = await rawRes.text();
+
+            const titleMatch = content.match(/title:\s*"?([^"\n]+)"?/);
+            const codeMatch = content.match(/code:\s*"?([^"\n]+)"?/);
+            const imageMatch = content.match(/image:\s*"?([^"\n]+)"?/);
+
+            const title = titleMatch ? titleMatch[1] : 'Producto sin nombre';
+            const code = codeMatch ? codeMatch[1] : 'N/A';
+            const image = imageMatch ? imageMatch[1] : '';
+
+            const bodyParts = content.split('---');
+            const body = bodyParts.length > 2 ? bodyParts.slice(2).join('---').replace(/"/g, '').trim() : '';
+
+            const card = document.createElement('div');
+            card.className = 'product-card';
+            card.innerHTML = `
+              <div>
+                ${image ? `<img src="${image}" alt="${title}">` : ''}
+                <div class="product-title">${title}</div>
+                <div class="product-code">CÓDIGO: ${code}</div>
+                <div class="product-desc">${body}</div>
+              </div>
+              <a class="btn-ws" href="https://wa.me/${WHATSAPP_NUMBER}?text=Hola,%20quiero%20consultar%20por%20el%20producto:%20${encodeURIComponent(title)}%20(Código:%20${encodeURIComponent(code)})" target="_blank">Pedir por WhatsApp</a>
+            `;
+            catalog.appendChild(card);
+          }
+        }
+      } catch (e) {
+        console.error("Error cargando productos:", e);
       }
     }
 
