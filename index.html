@@ -29,11 +29,11 @@
   </header>
 
   <div class="catalog-grid" id="catalog">
-    <div class="empty-msg">Cargando productos del catálogo...</div>
+    <div class="empty-msg">Cargando catálogo...</div>
   </div>
 
   <script>
-    // Cambia esto por tu número de WhatsApp real (con código de país sin el signo +)
+    // Tu número de WhatsApp con código de país (sin el +)
     const WHATSAPP_NUMBER = "573000000000"; 
 
     async function fetchProducts() {
@@ -43,7 +43,7 @@
         const res = await fetch(`https://api.github.com/repos/${repo}/contents/content/productos`);
         
         if (!res.ok) {
-          throw new Error("No se pudieron cargar los archivos o el repositorio es privado.");
+          throw new Error("No se pudo conectar con el catálogo.");
         }
         
         const files = await res.json();
@@ -54,7 +54,6 @@
             const rawRes = await fetch(file.download_url);
             const content = await rawRes.text();
 
-            // Extraer metadatos del archivo Markdown
             const titleMatch = content.match(/title:\s*"?([^"\n]+)"?/);
             const codeMatch = content.match(/code:\s*"?([^"\n]+)"?/);
             const imageMatch = content.match(/image:\s*"?([^"\n]+)"?/);
@@ -63,9 +62,8 @@
             const code = codeMatch ? codeMatch[1] : 'N/A';
             let image = imageMatch ? imageMatch[1] : '';
             
-            // Separar cuerpo de la descripción
             const bodyParts = content.split('---');
-            const body = bodyParts.length > 2 ? bodyParts.slice(2).join('---').trim() : '';
+            const body = bodyParts.length > 2 ? bodyParts.slice(2).join('---').replace(/"/g, '').trim() : '';
 
             const card = document.createElement('div');
             card.className = 'product-card';
@@ -82,7 +80,7 @@
           }
         }
       } catch (err) {
-        catalog.innerHTML = `<div class="empty-msg">No se pudieron desplegar los productos automáticos. Verifica que el repositorio sea público en GitHub.</div>`;
+        catalog.innerHTML = `<div class="empty-msg">Error cargando productos. Por favor recarga la página.</div>`;
       }
     }
 
