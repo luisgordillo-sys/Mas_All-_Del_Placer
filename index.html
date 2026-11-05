@@ -29,62 +29,91 @@
   </header>
 
   <div class="catalog-grid" id="catalog">
-    <div class="empty-msg">Cargando catálogo...</div>
+    <div class="empty-msg">Cargando productos...</div>
   </div>
 
   <script>
     const WHATSAPP_NUMBER = "573194622371";
 
-    // Nombres de archivos Markdown creados en la carpeta /content/productos/
-    const knownProducts = [
-      "disfraz-de-ratona-sensual.md",
-      "lencería-de-enfermera-disfraz-erotic-enfermera.md"
-    ];
-
+    // Función principal para cargar productos desde la API de GitHub
     async function loadCatalog() {
       const catalog = document.getElementById('catalog');
-      catalog.innerHTML = "";
-      let loadedCount = 0;
+      try {
+        const repo = "luisgordillo-sys/Mas_All_-Del_Placer";
+        const response = await fetch(`https://api.github.com/repos/${repo}/contents/content/productos`);
+        
+        if (!response.ok) {
+          throw new Error("No se pudo obtener el listado desde GitHub API.");
+        }
 
-      for (const fileName of knownProducts) {
+        const files = await response.json();
+        catalog.innerHTML = "";
+
+        for (const file of files) {
+          if (file.name.endsWith('.md')) {
+            const rawRes = await fetch(file.download_url);
+            const content = await rawRes.text();
+
+            parseAndRenderProduct(content, catalog);
+          }
+        }
+      } catch (e) {
+        console.warn("Fallo lectura dinámica API. Intentando método alternativo por archivos locales...", e);
+        fallbackLocalLoad();
+      }
+    }
+
+    // Método alternativo si la API de GitHub llega a ser bloqueada
+    async function fallbackLocalLoad() {
+      const catalog = document.getElementById('catalog');
+      const knownFiles = [
+        "disfraz-de-ratona-sensual.md",
+        "lencería-de-enfermera-disfraz-erotic-enfermera.md"
+      ];
+      
+      catalog.innerHTML = "";
+      let count = 0;
+
+      for (const fileName of knownFiles) {
         try {
           const res = await fetch(`/content/productos/${fileName}`);
-          if (!res.ok) continue;
-          
-          const content = await res.text();
-          
-          const titleMatch = content.match(/title:\s*"?([^"\n]+)"?/);
-          const codeMatch = content.match(/code:\s*"?([^"\n]+)"?/);
-          const imageMatch = content.match(/image:\s*"?([^"\n]+)"?/);
-
-          const title = titleMatch ? titleMatch[1] : 'Producto sin nombre';
-          const code = codeMatch ? codeMatch[1] : 'N/A';
-          const image = imageMatch ? imageMatch[1] : '';
-
-          const bodyParts = content.split('---');
-          const body = bodyParts.length > 2 ? bodyParts.slice(2).join('---').replace(/"/g, '').trim() : '';
-
-          const card = document.createElement('div');
-          card.className = 'product-card';
-          card.innerHTML = `
-            <div>
-              ${image ? `<img src="${image}" alt="${title}">` : ''}
-              <div class="product-title">${title}</div>
-              <div class="product-code">CÓDIGO: ${code}</div>
-              <div class="product-desc">${body}</div>
-            </div>
-            <a class="btn-ws" href="https://wa.me/${WHATSAPP_NUMBER}?text=Hola,%20quiero%20consultar%20por%20el%20producto:%20${encodeURIComponent(title)}%20(Código:%20${encodeURIComponent(code)})" target="_blank">Pedir por WhatsApp</a>
-          `;
-          catalog.appendChild(card);
-          loadedCount++;
-        } catch (e) {
-          console.error("Error cargando archivo:", fileName, e);
-        }
+          if (res.ok) {
+            const content = await res.text();
+            parseAndRenderProduct(content, catalog);
+            count++;
+          }
+        } catch (err) {}
       }
 
-      if (loadedCount === 0) {
-        catalog.innerHTML = `<div class="empty-msg">No se encontraron productos disponibles.</div>`;
+      if (count === 0) {
+        catalog.innerHTML = `<div class="empty-msg">No se pudieron cargar los productos. Por favor recarga la página.</div>`;
       }
+    }
+
+    function parseAndRenderProduct(content, container) {
+      const titleMatch = content.match(/title:\s*"?([^"\n]+)"?/);
+      const codeMatch = content.match(/code:\s*"?([^"\n]+)"?/);
+      const imageMatch = content.match(/image:\s*"?([^"\n]+)"?/);
+
+      const title = titleMatch ? titleMatch[1] : 'Producto';
+      const code = codeMatch ? codeMatch[1] : 'N/A';
+      const image = imageMatch ? imageMatch[1] : '';
+
+      const bodyParts = content.split('---');
+      const body = bodyParts.length > 2 ? bodyParts.slice(2).join('---').replace(/"/g, '').trim() : '';
+
+      const card = document.createElement('div');
+      card.className = 'product-card';
+      card.innerHTML = `
+        <div>
+          ${image ? `<img src="${image}" alt="${title}">` : ''}
+          <div class="product-title">${title}</div>
+          <div class="product-code">CÓDIGO: ${code}</div>
+          <div class="product-desc">${body}</div>
+        </div>
+        <a class="btn-ws" href="https://wa.me/${WHATSAPP_NUMBER}?text=Hola,%20quiero%20consultar%20por%20el%20producto:%20${encodeURIComponent(title)}%20(Código:%20${encodeURIComponent(code)})" target="_blank">Pedir por WhatsApp</a>
+      `;
+      container.appendChild(card);
     }
 
     loadCatalog();
