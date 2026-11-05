@@ -35,40 +35,41 @@
   <script>
     const WHATSAPP_NUMBER = "573194622371";
 
-    async function fetchProducts() {
+    async function loadAllProducts() {
       const catalog = document.getElementById('catalog');
-      let markdownUrls = [];
+      const loadedUrls = new Set();
+      const productList = [];
 
-      // 1. Petición a la API de GitHub
+      // Método 1: Intentar API de GitHub
       try {
         const repo = "luisgordillo-sys/Mas_All_-Del_Placer";
-        const res = await fetch(`https://api.github.com/repos/${repo}/contents/content/productos?t=${Date.now()}`);
+        const res = await fetch(`https://api.github.com/repos/${repo}/contents/content/productos?cache=${Date.now()}`);
         if (res.ok) {
           const files = await res.json();
-          for (const file of files) {
-            if (file.name.endsWith('.md')) {
-              markdownUrls.push(file.download_url);
-            }
+          for (const f of files) {
+            if (f.name.endsWith('.md')) loadedUrls.add(f.download_url);
           }
         }
-      } catch (err) {}
+      } catch (e) {}
 
-      // 2. Lista de rutas locales de respaldo (incluyendo variaciones de nombres)
-      if (markdownUrls.length === 0) {
-        markdownUrls = [
-          "/content/productos/disfraz-de-ratona-sensual.md",
-          "/content/productos/lencería-de-enfermera-disfraz-erotic-enfermera.md",
-          "/content/productos/lenceria-de-gatita-disfraz-erotic-gatita.md",
-         
-        ];
-      }
+      // Método 2: Escaneo inteligente de nombres comunes creados por Decap CMS
+      const knownFiles = [
+        "/content/productos/disfraz-de-ratona-sensual.md",
+        "/content/productos/lencería-de-enfermera-disfraz-erotic-enfermera.md",
+        "/content/productos/lenceria-de-enfermera-disfraz-erotic-enfermera.md",
+        "/content/productos/lenceria-de-gatita-disfraz-erotic-gatita.md",
+        "/content/productos/lenceria-de-gatita-disfraz-erótico-gatita.md",
+        "/content/productos/lencería-de-gatita-disfraz-erótico-gatita.md"
+      ];
+
+      knownFiles.forEach(path => loadedUrls.add(path));
 
       catalog.innerHTML = "";
       let count = 0;
 
-      for (const urlOrPath of markdownUrls) {
+      for (const url of loadedUrls) {
         try {
-          const res = await fetch(`${urlOrPath}?v=${Date.now()}`);
+          const res = await fetch(`${url}?v=${Date.now()}`);
           if (!res.ok) continue;
 
           const content = await res.text();
@@ -97,15 +98,15 @@
           `;
           catalog.appendChild(card);
           count++;
-        } catch (e) {}
+        } catch (err) {}
       }
 
       if (count === 0) {
-        catalog.innerHTML = `<div class="empty-msg">No hay productos disponibles por el momento.</div>`;
+        catalog.innerHTML = `<div class="empty-msg">No hay productos para mostrar en este momento.</div>`;
       }
     }
 
-    fetchProducts();
+    loadAllProducts();
   </script>
 
 </body>
