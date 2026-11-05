@@ -1,5 +1,5 @@
 ---
-title: Lencería de Gatita / Disfraz Erótico Gatita
+title: Lencería de Gatita / Disfraz Erotic Gatita
 code: DS005
 image: /images/ds005.png
 ---
